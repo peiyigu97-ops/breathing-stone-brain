@@ -1,0 +1,900 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Human Brain Digital Twin</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  background:#030308;
+  color:#e0e8ff;
+  font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','Segoe UI',sans-serif;
+  overflow:hidden; height:100vh; width:100vw;
+}
+#canvas-container { position:absolute; inset:0; }
+
+.glass {
+  background:rgba(8,10,32,0.60);
+  backdrop-filter:blur(18px);
+  -webkit-backdrop-filter:blur(18px);
+  border:1px solid rgba(80,100,255,0.16);
+  border-radius:16px;
+}
+
+/* Left panel */
+#panel-left {
+  position:absolute; top:24px; left:24px;
+  width:220px; padding:18px 14px;
+}
+#panel-left h2 {
+  font-size:10px; font-weight:700; letter-spacing:.14em;
+  text-transform:uppercase; color:rgba(140,160,255,.6); margin-bottom:12px;
+}
+.rrow {
+  display:flex; align-items:center; gap:9px;
+  padding:6px 7px; border-radius:8px; cursor:pointer;
+  transition:background .15s; margin-bottom:1px;
+}
+.rrow:hover { background:rgba(80,100,255,.12); }
+.rrow.active { background:rgba(80,100,255,.20); }
+.rdot { width:9px; height:9px; border-radius:50%; flex-shrink:0; }
+.rname { font-size:11px; font-weight:500; flex:1; color:rgba(210,225,255,.88); }
+.rbar-w { width:44px; height:3px; background:rgba(255,255,255,.07); border-radius:2px; overflow:hidden; }
+.rbar   { height:100%; border-radius:2px; transition:width .35s ease; width:0%; }
+
+/* Right panel */
+#panel-right {
+  position:absolute; top:24px; right:24px;
+  width:300px; padding:16px;
+  max-height: calc(100vh - 48px);
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(80,100,255,.2) transparent;
+}
+#panel-right h2 {
+  font-size:10px; font-weight:700; letter-spacing:.14em;
+  text-transform:uppercase; color:rgba(140,160,255,.6); margin-bottom:12px;
+}
+#exp-box {
+  font-size:12px; line-height:1.65; color:rgba(195,210,255,.82);
+  min-height:56px; padding:11px 12px;
+  background:rgba(255,255,255,.035); border-radius:10px; margin-bottom:12px;
+  border:1px solid rgba(80,100,255,.09); font-style:italic;
+}
+.srow {
+  display:flex; justify-content:space-between; align-items:center;
+  padding:4px 0; border-bottom:1px solid rgba(255,255,255,.045); font-size:11px;
+}
+.sl { color:rgba(140,160,255,.58); }
+.sv { color:rgba(210,228,255,.88); font-weight:600; }
+#dom-tag {
+  display:none; margin-top:9px; padding:3px 10px;
+  border-radius:20px; font-size:10px; font-weight:600; letter-spacing:.06em;
+  background:rgba(80,100,255,.18); border:1px solid rgba(80,100,255,.35);
+  color:#90aaff;
+}
+
+/* Section headers */
+.sec-h {
+  font-size:9px; font-weight:700; letter-spacing:.1em;
+  text-transform:uppercase; color:rgba(140,160,255,.45);
+  margin: 13px 0 7px 0;
+}
+
+/* Polyvagal state badge */
+#pv-badge {
+  display:inline-flex; align-items:center; gap:6px;
+  padding:4px 10px; border-radius:20px; font-size:10px;
+  font-weight:700; letter-spacing:.06em; margin-top:6px;
+  transition: background .4s, border-color .4s, color .4s;
+}
+#pv-badge.ventral    { background:rgba(40,180,100,.15); border:1px solid rgba(40,180,100,.4); color:#40c870; }
+#pv-badge.sympathetic{ background:rgba(220,60,60,.15);  border:1px solid rgba(220,60,60,.4);  color:#e05050; }
+#pv-badge.dorsal     { background:rgba(220,180,40,.15); border:1px solid rgba(220,180,40,.4); color:#d0b030; }
+#pv-badge .pvdot     { width:6px;height:6px;border-radius:50%; }
+#pv-badge.ventral    .pvdot { background:#40c870; }
+#pv-badge.sympathetic .pvdot{ background:#e05050; }
+#pv-badge.dorsal     .pvdot { background:#d0b030; }
+
+/* Bar rows (used for ANS, anxiety, sensory) */
+#motor-panel { margin-top:4px; }
+.mrow { display:flex; align-items:center; gap:7px; margin-bottom:4px; }
+.ml { width:66px; font-size:10px; color:rgba(160,178,255,.55); text-align:right; flex-shrink:0; }
+.mbar-w { flex:1; height:4px; background:rgba(255,255,255,.055); border-radius:2px; overflow:hidden; }
+.mbar { height:100%; border-radius:2px; transition:width .38s ease; }
+.mv { width:32px; font-size:9px; color:rgba(160,178,255,.45); text-align:right; flex-shrink:0; }
+
+/* Healing gauge */
+#heal-gauge-wrap {
+  height:6px; background:rgba(255,255,255,.055);
+  border-radius:3px; overflow:hidden; margin-top:4px;
+}
+#heal-gauge {
+  height:100%; border-radius:3px;
+  background: linear-gradient(90deg, #d84858, #d8a828, #40c870);
+  transition: width .5s ease;
+  width:0%;
+}
+
+/* Intervention box */
+#interv-box {
+  margin-top:4px; padding:8px 10px;
+  background:rgba(255,255,255,.03); border-radius:8px;
+  border:1px solid rgba(80,100,255,.08); font-size:10.5px;
+  color:rgba(180,200,255,.7); line-height:1.7;
+}
+#interv-box b { color:rgba(210,228,255,.9); font-weight:600; }
+
+/* Use freq ring */
+#use-freq-ring {
+  display:inline-block; width:38px; height:38px;
+  margin-left:6px; vertical-align:middle;
+}
+
+/* Bottom input */
+#panel-bottom {
+  position:absolute; bottom:24px; left:50%; transform:translateX(-50%);
+  width:460px; padding:12px 14px;
+  display:flex; align-items:center; gap:9px;
+}
+
+/* CSV / Training log panel (bottom-left) */
+#panel-csv {
+  position:absolute; bottom:24px; left:24px;
+  width:420px;
+  max-height:260px;
+}
+#panel-csv h2 {
+  font-size:9px; font-weight:700; letter-spacing:.14em;
+  text-transform:uppercase; color:rgba(140,160,255,.5); margin-bottom:8px;
+  display:flex; align-items:center; gap:8px;
+}
+#csv-tabs {
+  display:flex; gap:6px; margin-bottom:8px;
+}
+.csv-tab {
+  font-size:9px; padding:3px 10px; border-radius:5px; cursor:pointer;
+  background:rgba(255,255,255,.05); border:1px solid rgba(80,100,255,.15);
+  color:rgba(140,160,255,.55); transition:all .15s;
+}
+.csv-tab.active {
+  background:rgba(80,100,255,.18); border-color:rgba(80,100,255,.4);
+  color:#90aaff;
+}
+#csv-scroll {
+  overflow-x:auto; overflow-y:auto;
+  max-height:168px;
+  font-size:9.5px; font-family:monospace;
+  scrollbar-width:thin; scrollbar-color:rgba(80,100,255,.2) transparent;
+}
+#csv-scroll table {
+  border-collapse:collapse; min-width:100%; white-space:nowrap;
+}
+#csv-scroll th {
+  padding:3px 8px; text-align:left;
+  color:rgba(140,160,255,.5); font-weight:600;
+  border-bottom:1px solid rgba(255,255,255,.06);
+  position:sticky; top:0; background:rgba(8,10,32,.85);
+}
+#csv-scroll td {
+  padding:2px 8px; color:rgba(200,218,255,.75);
+  border-bottom:1px solid rgba(255,255,255,.03);
+}
+#csv-scroll tr:hover td { background:rgba(80,100,255,.08); }
+#csv-scroll td.hi { color:#40c870; font-weight:600; }
+#csv-scroll td.lo { color:#e05050; font-weight:600; }
+#csv-status {
+  font-size:9px; color:rgba(140,160,255,.35); margin-top:4px;
+}
+#inp {
+  flex:1; background:rgba(255,255,255,.055);
+  border:1px solid rgba(80,100,255,.22); border-radius:9px;
+  padding:9px 13px; font-size:12px; color:#e0e8ff; outline:none;
+  transition:border-color .18s;
+}
+#inp:focus { border-color:rgba(80,100,255,.55); }
+#inp::placeholder { color:rgba(140,160,255,.3); }
+#btn {
+  padding:9px 16px; border-radius:9px; border:none;
+  background:linear-gradient(135deg,#4858d8,#6448c0);
+  color:#fff; font-size:11px; font-weight:700; cursor:pointer;
+  transition:opacity .15s,transform .1s;
+}
+#btn:hover { opacity:.87; }
+#btn:active { transform:scale(.97); }
+
+#title {
+  position:absolute; top:24px; left:50%; transform:translateX(-50%);
+  font-size:12px; font-weight:700; letter-spacing:.2em;
+  text-transform:uppercase; color:rgba(140,170,255,.45); pointer-events:none;
+}
+#sdot {
+  position:absolute; bottom:28px; right:28px;
+  width:7px; height:7px; border-radius:50%; background:#2a2a46;
+  transition:background .3s;
+}
+#sdot.on { background:#40c880; box-shadow:0 0 6px #40c880; }
+</style>
+</head>
+<body>
+<div id="canvas-container"></div>
+<div id="title">Human Brain · Digital Twin</div>
+
+<div id="panel-left" class="glass">
+  <h2>Brain Regions</h2>
+  <div id="rlist"></div>
+</div>
+
+<div id="panel-right" class="glass">
+  <h2>Neural Activity</h2>
+  <div id="exp-box">Waiting for stimulus…</div>
+
+  <!-- Basic stats -->
+  <div class="srow"><span class="sl">Total Spikes</span><span class="sv" id="ss-spikes">—</span></div>
+  <div class="srow"><span class="sl">Active Regions</span><span class="sv" id="ss-active">—</span></div>
+  <div id="dom-tag"></div>
+
+  <!-- Polyvagal state -->
+  <div class="sec-h">Polyvagal State</div>
+  <div id="pv-badge" class="ventral"><span class="pvdot"></span><span id="pv-label">Ventral Vagal</span></div>
+
+  <!-- ANS panel -->
+  <div class="sec-h">Autonomic Nervous System</div>
+  <div class="mrow">
+    <span class="ml">Sympathetic</span>
+    <div class="mbar-w"><div class="mbar" id="bar-sym" style="background:#e05050"></div></div>
+    <span class="mv" id="val-sym">0.00</span>
+  </div>
+  <div class="mrow">
+    <span class="ml">Para-sym</span>
+    <div class="mbar-w"><div class="mbar" id="bar-para" style="background:#40c870"></div></div>
+    <span class="mv" id="val-para">0.00</span>
+  </div>
+  <div class="mrow">
+    <span class="ml">HRV Index</span>
+    <div class="mbar-w"><div class="mbar" id="bar-hrv" style="background:#4880d8"></div></div>
+    <span class="mv" id="val-hrv">0.00</span>
+  </div>
+  <div class="mrow">
+    <span class="ml">Cortisol</span>
+    <div class="mbar-w"><div class="mbar" id="bar-cort" style="background:#d8a828"></div></div>
+    <span class="mv" id="val-cort">0.00</span>
+  </div>
+
+  <!-- Anxiety decomposition -->
+  <div class="sec-h">Anxiety State</div>
+  <div class="mrow">
+    <span class="ml">Baseline</span>
+    <div class="mbar-w"><div class="mbar" id="bar-anx-base" style="background:#e05050"></div></div>
+    <span class="mv" id="val-anx-base">0.00</span>
+  </div>
+  <div class="mrow">
+    <span class="ml">Anticipatory</span>
+    <div class="mbar-w"><div class="mbar" id="bar-anx-ant" style="background:#d84888"></div></div>
+    <span class="mv" id="val-anx-ant">0.00</span>
+  </div>
+  <div class="mrow">
+    <span class="ml">Somatic</span>
+    <div class="mbar-w"><div class="mbar" id="bar-anx-som" style="background:#d87828"></div></div>
+    <span class="mv" id="val-anx-som">0.00</span>
+  </div>
+  <div class="mrow">
+    <span class="ml">Regulation</span>
+    <div class="mbar-w"><div class="mbar" id="bar-anx-reg" style="background:#4880d8"></div></div>
+    <span class="mv" id="val-anx-reg">0.00</span>
+  </div>
+  <div class="sec-h" style="margin-bottom:4px;">Healing Index</div>
+  <div id="heal-gauge-wrap"><div id="heal-gauge"></div></div>
+  <div style="text-align:right;font-size:9px;color:rgba(140,160,255,.4);margin-top:2px;" id="val-heal">0.00</div>
+
+  <!-- Sensory channels -->
+  <div class="sec-h">Active Sensory Channels</div>
+  <div class="mrow">
+    <span class="ml">Touch deep</span>
+    <div class="mbar-w"><div class="mbar" id="bar-s-td" style="background:#7858d8"></div></div>
+    <span class="mv" id="val-s-td">0.00</span>
+  </div>
+  <div class="mrow">
+    <span class="ml">Vibration</span>
+    <div class="mbar-w"><div class="mbar" id="bar-s-vib" style="background:#5870d8"></div></div>
+    <span class="mv" id="val-s-vib">0.00</span>
+  </div>
+  <div class="mrow">
+    <span class="ml">Thermal cold</span>
+    <div class="mbar-w"><div class="mbar" id="bar-s-tc" style="background:#3898d8"></div></div>
+    <span class="mv" id="val-s-tc">0.00</span>
+  </div>
+  <div class="mrow">
+    <span class="ml">Rhythmic</span>
+    <div class="mbar-w"><div class="mbar" id="bar-s-rhy" style="background:#40c8a8"></div></div>
+    <span class="mv" id="val-s-rhy">0.00</span>
+  </div>
+  <div class="mrow">
+    <span class="ml">Interoception</span>
+    <div class="mbar-w"><div class="mbar" id="bar-s-int" style="background:#a848d8"></div></div>
+    <span class="mv" id="val-s-int">0.00</span>
+  </div>
+
+  <!-- Motor commands -->
+  <div id="motor-panel">
+    <div class="sec-h">Motor Commands</div>
+    <div class="mrow"><span class="ml">Approach</span><div class="mbar-w"><div class="mbar" id="ma" style="background:#40c898"></div></div><span class="mv" id="mv-a">0.00</span></div>
+    <div class="mrow"><span class="ml">Avoid</span><div class="mbar-w"><div class="mbar" id="mb" style="background:#d84858"></div></div><span class="mv" id="mv-b">0.00</span></div>
+    <div class="mrow"><span class="ml">Withdraw</span><div class="mbar-w"><div class="mbar" id="mc" style="background:#d87828"></div></div><span class="mv" id="mv-c">0.00</span></div>
+    <div class="mrow"><span class="ml">Engage</span><div class="mbar-w"><div class="mbar" id="md" style="background:#4880d8"></div></div><span class="mv" id="mv-d">0.00</span></div>
+  </div>
+
+  <!-- Stone intervention command -->
+  <div class="sec-h">Stone Intervention</div>
+  <div id="interv-box">—</div>
+</div>
+
+<!-- CSV / Training log panel (bottom-left) -->
+<div id="panel-csv" class="glass">
+  <h2>
+    Session Data
+    <span id="csv-live-dot" style="width:6px;height:6px;border-radius:50%;
+      background:#2a2a46;display:inline-block;transition:background .3s;"></span>
+  </h2>
+  <div id="csv-tabs">
+    <div class="csv-tab active" onclick="switchTab('csv')">TGAM CSV</div>
+    <div class="csv-tab" onclick="switchTab('log')">Training Log</div>
+  </div>
+  <div id="csv-scroll"><div style="color:rgba(140,160,255,.3);font-size:10px;padding:8px;">
+    Waiting for stone_session.csv…
+  </div></div>
+  <div id="csv-status">–</div>
+</div>
+
+<div id="panel-bottom" class="glass">
+  <input id="inp" type="text" placeholder="Stimulate… (danger, remember, run, fear, see, pain…)">
+  <button id="btn">Stimulate</button>
+</div>
+<div id="sdot"></div>
+
+<script type="importmap">
+{"imports":{"three":"/static/js/three.module.js","three/addons/":"/static/js/addons/"}}
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/OrbitControls.js';
+
+// ── Region anatomy: center, shape scale, particle count, color ─────────────
+// Shapes: 'sheet' = cortical (flat+curled), 'ellipsoid' = deep nucleus, 'elongated' = brainstem
+const RDEFS = {
+  frontal_cortex:   { c:[-.1, 1.3, 1.1], s:[1.4,.55,1.1], n:2800, col:0x5068e0, shape:'sheet',     label:'Frontal Cortex' },
+  parietal_cortex:  { c:[0,   1.55,-.3], s:[1.3,.45,1.0], n:2400, col:0x4488d0, shape:'sheet',     label:'Parietal Cortex' },
+  temporal_cortex:  { c:[1.4, .55, .2],  s:[1.1,.4,.8],   n:2000, col:0x3898c8, shape:'sheet',     label:'Temporal Cortex' },
+  occipital_cortex: { c:[0,   .9,-1.7],  s:[1.1,.4,.85],  n:1800, col:0x3070b8, shape:'sheet',     label:'Occipital Cortex' },
+  basal_ganglia:    { c:[.5,  .1, .3],   s:[.45,.38,.4],  n:1200, col:0x8058d0, shape:'ellipsoid', label:'Basal Ganglia' },
+  thalamus:         { c:[0,   .3, .0],   s:[.35,.3,.35],  n:1000, col:0x9860c8, shape:'ellipsoid', label:'Thalamus' },
+  hippocampus:      { c:[1.1,-.15,-.5],  s:[.65,.22,.3],  n:1400, col:0x3090a8, shape:'curved',    label:'Hippocampus' },
+  amygdala:         { c:[1.0,-.25, .5],  s:[.28,.25,.28], n: 900, col:0xd05060, shape:'ellipsoid', label:'Amygdala' },
+  cerebellum:       { c:[0, -1.15,-1.1], s:[1.0,.5,.8],   n:2200, col:0x40a070, shape:'sheet',     label:'Cerebellum' },
+  brainstem:        { c:[0, -1.6,  .0],  s:[.18,.5,.18],  n: 700, col:0x7888b0, shape:'elongated', label:'Brain Stem' },
+};
+
+// Mirror cortex + hippocampus + amygdala to opposite hemisphere
+const MIRROR = ['temporal_cortex','occipital_cortex','hippocampus','amygdala'];
+
+function buildParticles(def, rng, mirror=false) {
+  const { c, s, n, shape } = def;
+  const pos = new Float32Array(n * 3);
+  const offsets = new Float32Array(n * 3); // for animation
+  for (let i = 0; i < n; i++) {
+    let x, y, z;
+    if (shape === 'sheet') {
+      // Flat cortical sheet with surface curvature
+      const u = (rng() - .5) * 2;
+      const v = (rng() - .5) * 2;
+      const w = (rng() - .5) * .35; // thin
+      const curl = Math.sin(u * 1.2) * .18 + Math.cos(v * .9) * .12;
+      x = u * s[0];
+      y = w * s[1] + curl;
+      z = v * s[2];
+    } else if (shape === 'curved') {
+      // Hippocampus: elongated banana curve
+      const t  = (rng() - .5) * 2;
+      const r2 = rng() * .5;
+      const a  = t * Math.PI * .7;
+      x = Math.cos(a) * s[0] * .8 + (rng()-.5) * s[0] * .3;
+      y = Math.sin(a) * s[1] * 1.2 + (rng()-.5) * .08;
+      z = (rng()-.5) * s[2] * .5;
+    } else if (shape === 'elongated') {
+      // Brainstem: tall narrow cylinder
+      x = (rng()-.5) * s[0] * 2;
+      y = (rng()-.5) * s[1] * 2;
+      z = (rng()-.5) * s[2] * 2;
+      // Keep in cylinder
+      const r = Math.sqrt(x*x+z*z);
+      if (r > s[0]) { x *= s[0]/r; z *= s[0]/r; }
+    } else {
+      // Ellipsoid
+      const phi   = rng() * Math.PI * 2;
+      const theta = Math.acos(2 * rng() - 1);
+      const r3    = Math.cbrt(rng());
+      x = r3 * Math.sin(theta)*Math.cos(phi) * s[0];
+      y = r3 * Math.sin(theta)*Math.sin(phi) * s[1];
+      z = r3 * Math.cos(theta) * s[2];
+    }
+    pos[i*3]   = c[0] + (mirror ? -x : x);
+    pos[i*3+1] = c[1] + y;
+    pos[i*3+2] = c[2] + z;
+    offsets[i*3]   = (rng()-.5)*2;
+    offsets[i*3+1] = (rng()-.5)*2;
+    offsets[i*3+2] = (rng()-.5)*2;
+  }
+  return { pos, offsets };
+}
+
+// ── Three.js setup ────────────────────────────────────
+const cont = document.getElementById('canvas-container');
+const renderer = new THREE.WebGLRenderer({ antialias:true, alpha:true });
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+renderer.setSize(cont.clientWidth, cont.clientHeight);
+renderer.setClearColor(0,0);
+cont.appendChild(renderer.domElement);
+
+const scene  = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(48, cont.clientWidth/cont.clientHeight, .1, 200);
+camera.position.set(0, .4, 6.5);
+
+const ctrl = new OrbitControls(camera, renderer.domElement);
+ctrl.enableDamping = true; ctrl.dampingFactor = .055;
+ctrl.minDistance = 3; ctrl.maxDistance = 16;
+ctrl.autoRotate = true; ctrl.autoRotateSpeed = .35;
+
+scene.add(new THREE.AmbientLight(0x334466, 2));
+const dl = new THREE.DirectionalLight(0x8899ff, 1.0);
+dl.position.set(4,6,5); scene.add(dl);
+
+// ── Transparent brain shell ────────────────────────────
+{
+  const g = new THREE.SphereGeometry(2.05, 64, 40);
+  g.scale(1, 1.18, 1.08);
+  scene.add(new THREE.Mesh(g, new THREE.MeshPhysicalMaterial({
+    color:0x111840, transparent:true, opacity:.06,
+    roughness:.3, metalness:.1
+  })));
+  const g2 = new THREE.SphereGeometry(2.2, 32, 24);
+  g2.scale(1,1.18,1.08);
+  scene.add(new THREE.Mesh(g2, new THREE.MeshBasicMaterial({
+    color:0x1828a0, transparent:true, opacity:.025, side:THREE.BackSide
+  })));
+}
+
+// ── Build particle systems ─────────────────────────────
+let seed = 42;
+function rng() { seed = (seed*1664525+1013904223)&0xffffffff; return (seed>>>0)/0xffffffff; }
+
+const regions = {};   // id → { points, geo, mat, positions, offsets, activity, targetActivity, color, label }
+
+function buildRegion(id, def, mirror=false) {
+  const key = mirror ? id+'_L' : id;
+  const { pos, offsets } = buildParticles(def, rng, mirror);
+  const n = def.n;
+  const colors = new Float32Array(n * 3);
+  const baseCol = new THREE.Color(def.col);
+  for (let i=0;i<n;i++) {
+    colors[i*3]  = baseCol.r * .4;
+    colors[i*3+1]= baseCol.g * .4;
+    colors[i*3+2]= baseCol.b * .4;
+  }
+
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.BufferAttribute(pos.slice(), 3));
+  geo.setAttribute('color',    new THREE.BufferAttribute(colors, 3));
+
+  const mat = new THREE.PointsMaterial({
+    size: .028, vertexColors: true,
+    transparent: true, opacity: .72,
+    sizeAttenuation: true, depthWrite: false,
+  });
+  const points = new THREE.Points(geo, mat);
+  scene.add(points);
+
+  regions[key] = {
+    points, geo, mat,
+    basePositions: pos.slice(),
+    offsets,
+    colors, n,
+    activity: 0, targetActivity: 0,
+    baseCol,
+    label: def.label + (mirror?' (L)':''),
+    sourceId: id,
+    mirror,
+  };
+}
+
+Object.entries(RDEFS).forEach(([id, def]) => {
+  buildRegion(id, def, false);
+  if (MIRROR.includes(id)) buildRegion(id, def, true);
+});
+
+// ── Connection tubes ──────────────────────────────────
+const EDGES = [
+  ['frontal_cortex','parietal_cortex',.30],
+  ['frontal_cortex','temporal_cortex',.40],
+  ['frontal_cortex','basal_ganglia',  .50],
+  ['frontal_cortex','thalamus',       .20],
+  ['frontal_cortex','hippocampus',    .30],
+  ['frontal_cortex','amygdala',       .20],
+  ['frontal_cortex','cerebellum',     .30],
+  ['parietal_cortex','thalamus',      .30],
+  ['parietal_cortex','occipital_cortex',.30],
+  ['temporal_cortex','thalamus',      .30],
+  ['temporal_cortex','hippocampus',   .30],
+  ['temporal_cortex','amygdala',      .20],
+  ['occipital_cortex','thalamus',     .40],
+  ['basal_ganglia','thalamus',        .30],
+  ['basal_ganglia','cerebellum',      .50],
+  ['basal_ganglia','amygdala',        .30],
+  ['thalamus','brainstem',            .20],
+  ['hippocampus','amygdala',          .40],
+  ['amygdala','brainstem',            .40],
+  ['cerebellum','brainstem',          .25],
+];
+
+const tubes = [];
+EDGES.forEach(([a,b,w]) => {
+  const ra = RDEFS[a], rb = RDEFS[b];
+  if (!ra||!rb) return;
+  // Cubic bezier through midpoints to avoid going through brain center
+  const p0 = new THREE.Vector3(...ra.c);
+  const p3 = new THREE.Vector3(...rb.c);
+  const mid = p0.clone().lerp(p3, .5);
+  const offset = new THREE.Vector3(
+    (rng()-.5)*.4, (rng()-.5)*.3, (rng()-.5)*.4
+  );
+  mid.add(offset);
+  const p1 = p0.clone().lerp(mid, .5);
+  const p2 = p3.clone().lerp(mid, .5);
+  const curve = new THREE.CubicBezierCurve3(p0, p1, p2, p3);
+  const geo = new THREE.TubeGeometry(curve, 12, .005 + w*.008, 4, false);
+  const mat = new THREE.MeshBasicMaterial({
+    color:0x3050a0, transparent:true, opacity:.25+w*.15
+  });
+  const mesh = new THREE.Mesh(geo, mat);
+  scene.add(mesh);
+  tubes.push({ mesh, mat, srcId:a, dstId:b, baseOpacity:.22+w*.15 });
+});
+
+// ── UI: region list ────────────────────────────────────
+const rlistEl = document.getElementById('rlist');
+const uiRows = {};
+
+Object.entries(RDEFS).forEach(([id, def]) => {
+  const row = document.createElement('div');
+  row.className = 'rrow';
+  const hex = def.col.toString(16).padStart(6,'0');
+  row.innerHTML = `
+    <div class="rdot" style="background:#${hex}"></div>
+    <span class="rname">${def.label}</span>
+    <div class="rbar-w"><div class="rbar" style="background:#${hex}"></div></div>`;
+  row.addEventListener('click', () => {
+    document.querySelectorAll('.rrow').forEach(r=>r.classList.remove('active'));
+    row.classList.add('active');
+    const p = new THREE.Vector3(...def.c);
+    ctrl.target.lerp(p, 1);
+    ctrl.autoRotate = false;
+    setTimeout(()=>{ ctrl.autoRotate=true; }, 5000);
+  });
+  rlistEl.appendChild(row);
+  uiRows[id] = { bar: row.querySelector('.rbar'), dot: row.querySelector('.rdot') };
+});
+
+// ── Helpers ────────────────────────────────────────────
+function lerp(a,b,t){ return a+(b-a)*t; }
+
+function actCol(base, activity) {
+  const t = Math.min(1, activity);
+  // base color → hot white-blue at full activity
+  const r = lerp(base.r*.35, 1.0, t*.9);
+  const g = lerp(base.g*.35, .88, t*.75);
+  const b = lerp(base.b*.35, 1.0, t*.6 + .4);
+  return { r, g, b };
+}
+
+// ── Apply brain state from WebSocket ──────────────────
+let motorCmd = { approach:0, avoid:0, withdraw:0, engage:0 };
+
+function setBar(id, val, valId) {
+  const el = document.getElementById(id);
+  const vl = document.getElementById(valId);
+  if (el) el.style.width = `${(val*100).toFixed(1)}%`;
+  if (vl) vl.textContent = val.toFixed(2);
+}
+
+function setPVBadge(pv) {
+  const badge = document.getElementById('pv-badge');
+  const label = document.getElementById('pv-label');
+  if (!badge) return;
+  badge.className = 'pv-badge ' + (pv || 'ventral');
+  const names = { ventral:'Ventral Vagal', sympathetic:'Sympathetic', dorsal:'Dorsal Vagal' };
+  if (label) label.textContent = names[pv] || pv || 'Ventral Vagal';
+}
+
+function updateIntervBox(interv) {
+  const el = document.getElementById('interv-box');
+  if (!el || !interv) return;
+  const modeColors = { calm:'#40c870', activate:'#d8a828', default:'#4880d8' };
+  const col = modeColors[interv.mode] || '#aaa';
+  el.innerHTML =
+    `<b style="color:${col}">${(interv.mode||'default').toUpperCase()}</b> &nbsp; ` +
+    `🌡 <b>${interv.temp_c?.toFixed(1) ?? '—'}°C</b> &nbsp; ` +
+    `<b>${interv.inhale_s ?? 4}↑</b> / <b>${interv.exhale_s ?? 6}↓</b>s &nbsp; ` +
+    `×${interv.cycles ?? 4} cycles` +
+    (interv.trigger_now ? ' &nbsp; <b style="color:#e05050">▶ TRIGGER</b>' : '');
+}
+
+function applyState(data) {
+  const nm = {};
+  data.nodes.forEach(n => nm[n.id] = n);
+
+  Object.entries(regions).forEach(([key, reg]) => {
+    const src = nm[reg.sourceId];
+    if (!src) return;
+    reg.targetActivity = src.activity;
+  });
+
+  if (data.event) {
+    const ev = data.event;
+    document.getElementById('exp-box').textContent = ev.experience || '…';
+    document.getElementById('ss-spikes').textContent = ev.total_spikes.toLocaleString();
+    document.getElementById('ss-active').textContent =
+      data.nodes.filter(n=>n.activity>.01).length;
+
+    const tag = document.getElementById('dom-tag');
+    tag.style.display = 'inline-block';
+    tag.textContent = RDEFS[ev.dominant]?.label ?? ev.dominant;
+
+    motorCmd = ev.motor || motorCmd;
+    updateMotor();
+
+    // Polyvagal state
+    if (ev.pv_state) setPVBadge(ev.pv_state);
+
+    // ANS
+    if (ev.ans) {
+      setBar('bar-sym',  ev.ans.sympathetic,     'val-sym');
+      setBar('bar-para', ev.ans.parasympathetic,  'val-para');
+      setBar('bar-hrv',  ev.ans.hrv_index,        'val-hrv');
+      setBar('bar-cort', ev.ans.cortisol,         'val-cort');
+    }
+
+    // Anxiety
+    if (ev.anxiety) {
+      setBar('bar-anx-base', ev.anxiety.baseline,      'val-anx-base');
+      setBar('bar-anx-ant',  ev.anxiety.anticipatory,  'val-anx-ant');
+      setBar('bar-anx-som',  ev.anxiety.somatic,       'val-anx-som');
+      setBar('bar-anx-reg',  ev.anxiety.regulation,    'val-anx-reg');
+      const hi = ev.anxiety.healing_index || 0;
+      const hg = document.getElementById('heal-gauge');
+      const hv = document.getElementById('val-heal');
+      if (hg) hg.style.width = `${(hi*100).toFixed(1)}%`;
+      if (hv) hv.textContent = hi.toFixed(2);
+    }
+
+    // Sensory channels
+    if (ev.sensory) {
+      setBar('bar-s-td',  ev.sensory.touch_deep      || 0, 'val-s-td');
+      setBar('bar-s-vib', ev.sensory.touch_vibration || 0, 'val-s-vib');
+      setBar('bar-s-tc',  ev.sensory.thermal_cold    || 0, 'val-s-tc');
+      setBar('bar-s-rhy', ev.sensory.rhythmic        || 0, 'val-s-rhy');
+      setBar('bar-s-int', ev.sensory.interoception   || 0, 'val-s-int');
+    }
+
+    // Intervention command (stone_bridge only)
+    if (ev.intervention) updateIntervBox(ev.intervention);
+
+    if (regions[ev.dominant]) regions[ev.dominant].targetActivity =
+      Math.max(regions[ev.dominant].targetActivity, 1.0);
+  }
+}
+
+function updateMotor() {
+  const pairs = [
+    ['a', motorCmd.approach], ['b', motorCmd.avoid],
+    ['c', motorCmd.withdraw], ['d', motorCmd.engage],
+  ];
+  pairs.forEach(([k,v]) => {
+    document.getElementById('m'+k).style.width = `${(v*100).toFixed(1)}%`;
+    document.getElementById('mv-'+k).textContent = v.toFixed(2);
+  });
+}
+
+// ── Animation loop ─────────────────────────────────────
+const clock = new THREE.Clock();
+let t = 0;
+
+function animate() {
+  requestAnimationFrame(animate);
+  t += clock.getDelta();
+  ctrl.update();
+
+  Object.entries(regions).forEach(([key, reg]) => {
+    reg.activity = lerp(reg.activity, reg.targetActivity, .06);
+    reg.targetActivity = lerp(reg.targetActivity, 0, .012);
+
+    const a  = reg.activity;
+    const ac = actCol(reg.baseCol, a);
+    const pos = reg.geo.attributes.position.array;
+    const col = reg.geo.attributes.color.array;
+    const bp  = reg.basePositions;
+    const off = reg.offsets;
+    const n   = reg.n;
+
+    for (let i=0; i<n; i++) {
+      // Particle drift with activity
+      const wave = a * .04 * Math.sin(t * 3.5 + off[i*3] * 4.2);
+      pos[i*3]   = bp[i*3]   + wave * off[i*3];
+      pos[i*3+1] = bp[i*3+1] + wave * off[i*3+1] * .6;
+      pos[i*3+2] = bp[i*3+2] + wave * off[i*3+2];
+
+      // Per-particle brightness flicker at high activity
+      const flicker = a > .05 ? (.7 + .3 * Math.sin(t * 8 + off[i*3+2] * 10)) : 1;
+      col[i*3]   = ac.r * flicker;
+      col[i*3+1] = ac.g * flicker;
+      col[i*3+2] = ac.b * flicker;
+    }
+    reg.geo.attributes.position.needsUpdate = true;
+    reg.geo.attributes.color.needsUpdate    = true;
+    reg.mat.size    = .022 + a * .018;
+    reg.mat.opacity = .55  + a * .38;
+
+    // UI bar
+    const row = uiRows[reg.sourceId];
+    if (row && !reg.mirror) {
+      row.bar.style.width = `${(a*100).toFixed(1)}%`;
+      const hex = '#'+reg.baseCol.getHexString();
+      row.dot.style.boxShadow = a>.04 ? `0 0 ${(a*9).toFixed(1)}px ${hex}` : 'none';
+    }
+  });
+
+  // Tubes: flash when both endpoints active
+  tubes.forEach(tube => {
+    const sa = regions[tube.srcId]?.activity ?? 0;
+    const da = regions[tube.dstId]?.activity ?? 0;
+    const flash = (sa + da) * .5;
+    tube.mat.opacity = lerp(tube.mat.opacity, tube.baseOpacity + flash*.45, .07);
+    const cr = lerp(.19, .5, flash), cg = lerp(.31, .8, flash), cb = lerp(.63, 1.0, flash);
+    tube.mat.color.setRGB(cr, cg, cb);
+  });
+
+  renderer.render(scene, camera);
+}
+animate();
+
+// ── WebSocket ──────────────────────────────────────────
+let ws;
+const sdot = document.getElementById('sdot');
+
+function connect() {
+  const host = location.hostname === 'localhost' ? '127.0.0.1' : location.host;
+  ws = new WebSocket(`ws://${host}:${location.port}/ws`);
+  ws.onopen  = () => sdot.classList.add('on');
+  ws.onclose = () => { sdot.classList.remove('on'); setTimeout(connect, 2000); };
+  ws.onmessage = e => applyState(JSON.parse(e.data));
+}
+connect();
+
+function send() {
+  const text = document.getElementById('inp').value.trim();
+  if (!text || ws?.readyState !== 1) return;
+  ws.send(JSON.stringify({ type:'stimulate', text }));
+  document.getElementById('inp').value = '';
+  ctrl.autoRotate = true;
+}
+document.getElementById('btn').addEventListener('click', send);
+document.getElementById('inp').addEventListener('keydown', e => e.key==='Enter' && send());
+
+window.addEventListener('resize', () => {
+  const w = cont.clientWidth, h = cont.clientHeight;
+  camera.aspect = w/h;
+  camera.updateProjectionMatrix();
+  renderer.setSize(w, h);
+});
+
+// ── CSV / Training Log panel ───────────────────────────────────────────────
+let _csvTab = 'csv';
+let _csvPollTimer = null;
+
+function switchTab(tab) {
+  _csvTab = tab;
+  document.querySelectorAll('.csv-tab').forEach((el, i) => {
+    el.classList.toggle('active', (i === 0 ? 'csv' : 'log') === tab);
+  });
+  pollData();
+}
+
+// Columns to show in each mode (order matters)
+const CSV_COLS  = ['timestamp','attention','meditation','delta','theta',
+                   'low_alpha','high_alpha','low_beta','high_beta',
+                   'low_gamma','mid_gamma','raw_eeg'];
+const LOG_COLS  = ['step','pv_state','skin_temp','grip_n','healing_index',
+                   'hrv_index','cortisol','anx_baseline','attention','meditation',
+                   'interv_mode','interv_temp_c','trigger_now'];
+
+function fmtVal(col, v) {
+  if (typeof v === 'number') {
+    if (col === 'timestamp') return new Date(v * 1000).toLocaleTimeString();
+    if (['attention','meditation'].includes(col)) return Math.round(v);
+    if (v > 1000) return Math.round(v).toLocaleString();
+    return v.toFixed(2);
+  }
+  return v ?? '—';
+}
+
+function colClass(col, v) {
+  if (col === 'healing_index' && typeof v === 'number') return v > 0.3 ? 'hi' : '';
+  if (col === 'cortisol'       && typeof v === 'number') return v > 0.5 ? 'lo' : '';
+  if (col === 'pv_state') {
+    if (v === 'sympathetic') return 'lo';
+    if (v === 'ventral')     return 'hi';
+  }
+  return '';
+}
+
+async function pollData() {
+  const dot   = document.getElementById('csv-live-dot');
+  const scrl  = document.getElementById('csv-scroll');
+  const stats = document.getElementById('csv-status');
+
+  try {
+    const url  = _csvTab === 'csv' ? '/api/csv?n=40' : '/api/log?n=40';
+    const res  = await fetch(url);
+    const data = await res.json();
+
+    if (!data.exists) {
+      scrl.innerHTML = `<div style="color:rgba(140,160,255,.3);font-size:10px;padding:8px;">
+        No ${_csvTab === 'csv' ? 'stone_session.csv' : 'training log'} found yet.</div>`;
+      stats.textContent = 'File not created — run stone_bridge.py first';
+      return;
+    }
+
+    const rows = _csvTab === 'csv' ? data.rows    : data.records;
+    const cols = _csvTab === 'csv' ? CSV_COLS     : LOG_COLS;
+    const tot  = data.total;
+
+    if (!rows || rows.length === 0) {
+      scrl.innerHTML = `<div style="color:rgba(140,160,255,.3);font-size:10px;padding:8px;">No rows yet.</div>`;
+      return;
+    }
+
+    // Build table (latest row on top)
+    const rev = [...rows].reverse();
+    let html = '<table><thead><tr>';
+    cols.forEach(c => { html += `<th>${c}</th>`; });
+    html += '</tr></thead><tbody>';
+    rev.forEach((row, ri) => {
+      html += `<tr${ri === 0 ? ' style="background:rgba(80,100,255,.07)"' : ''}>`;
+      cols.forEach(c => {
+        const v  = row[c];
+        const cl = colClass(c, v);
+        html += `<td${cl ? ` class="${cl}"` : ''}>${fmtVal(c, v)}</td>`;
+      });
+      html += '</tr>';
+    });
+    html += '</tbody></table>';
+    scrl.innerHTML = html;
+
+    // Auto-scroll to top (newest)
+    scrl.scrollTop = 0;
+
+    stats.textContent = `${tot} total rows · updated ${new Date().toLocaleTimeString()}`;
+    dot.style.background = '#40c880';
+    dot.style.boxShadow  = '0 0 5px #40c880';
+    setTimeout(() => { dot.style.background='#2a2a46'; dot.style.boxShadow='none'; }, 800);
+
+  } catch(e) {
+    stats.textContent = 'API unreachable';
+  }
+}
+
+// Poll every 2 seconds
+pollData();
+setInterval(pollData, 2000);
+</script>
+</body>
+</html>

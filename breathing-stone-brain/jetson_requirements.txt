@@ -1,0 +1,21 @@
+# jetson_requirements.txt
+# Tested on Jetson Nano 4GB, JetPack 4.6, Python 3.8
+#
+# Install:
+#   pip3 install -r jetson_requirements.txt
+
+# Core
+numpy>=1.21
+fastapi>=0.100.0
+uvicorn[standard]>=0.23.0
+websockets>=11.0
+pyserial>=3.5
+
+# BLE (ESP32 wireless)
+bleak>=0.21.1
+
+# Optional: signal processing for EEG
+scipy>=1.9.0
+
+# Optional: Qwen LLM parser (needs ~2GB RAM, skip on Nano 4GB if tight)
+# llama-cpp-python>=0.2.0
