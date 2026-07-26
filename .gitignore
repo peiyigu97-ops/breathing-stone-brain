@@ -1,0 +1,37 @@
+# Large model files
+chimera/models/*.gguf
+HumanBrainDT/models/*.gguf
+
+# Connectome data (auto-downloaded by setup.py)
+chimera/connectome/*.npy
+chimera/connectome/*.json
+chimera/connectome/*.csv
+data/fallback_*.npy
+data/fallback_*.json
+
+# PyInstaller build output
+build/
+dist/
+*.spec.bak
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Session outputs (runtime artifacts, not source)
+stone_session.csv
+stone_session_training.jsonl
+tgam_output.csv
+tgam_demo.csv
+
+# Brain state pickle (runtime)
+HumanBrainDT/brain_state.pkl
+
+# MCP runtime state
+mcp_state.json
+mcp_cmd.txt

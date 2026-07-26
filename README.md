@@ -1,193 +1,227 @@
-# Acknowledgments
+# CHIMERA + HumanBrainDT
 
-This project would not have been possible without the following works, datasets, libraries, and researchers. Every external contribution is listed here in full.
+**A digital lifeform and human brain simulation for anxiety research**
 
----
-
-## Connectome Data
-
-**Winding, M., Pedigo, B. D., Barnes, C. L., Patsolic, H. G., Park, Y., Krieger, T., Jutisz, A., Wu, Y., Berck, M. E., Lin, Y., Venkatachalam, K., Cardona, A., Costa, M., Bhatt, D. L., Bhatt, D., Bhatt, B., Bhatnagar, M., Bhatt, P., … Zlatic, M. (2023).** The connectome of an insect brain. *Science*, 379(6636). https://doi.org/10.1126/science.add9330
-
-The CHIMERA simulation uses the *Drosophila* larva full brain connectome from Winding et al. (2023), specifically the adjacency matrix and neuron type annotations from `Supplementary-Data-S1.zip`. The first 1,373 × 1,373 neuron submatrix and the corresponding neuron metadata are used. Data is distributed under **CC BY 4.0**.
-
-Data repository: https://github.com/brain-networks/larval-drosophila-connectome
+![neurons](https://img.shields.io/badge/CHIMERA_neurons-1%2C373-blue)
+![synapses](https://img.shields.io/badge/synapses-22%2C400-blue)
+![human_regions](https://img.shields.io/badge/HumanBrain_regions-10-purple)
+![platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Jetson-lightgrey)
 
 ---
 
-## Physics Simulation
+## What this is
 
-**Todorov, E., Erez, T., & Tassa, Y. (2012).** MuJoCo: A physics engine for model-based control. *2012 IEEE/RSJ International Conference on Intelligent Robots and Systems (IROS)*. https://doi.org/10.1109/IROS.2012.6386109
+This repo contains two interconnected systems:
 
-MuJoCo is used to simulate the 12-actuator *Drosophila*-inspired body in `chimera_app.py`. Licensed under **Apache 2.0**. https://mujoco.org
+**CHIMERA** — A digital lifeform built from the real *Drosophila* larva connectome (Winding et al., *Science* 2023). 1,373 LIF neurons and 22,400 synapses drive a MuJoCo physics body. Type anything in any language → sensory channels fire → emergent motor behavior.
 
----
+**HumanBrainDT** — A human brain digital twin with 10 regions, LIF simulation extended for anxiety-sensory healing research. Models the Autonomic Nervous System (sympathetic/parasympathetic), anxiety decomposition (baseline, anticipatory, somatic, regulation), and sensory healing pathways (CT fibers → oxytocin, vagal cold reflex, interoceptive prediction coding).
 
-## Language Model Inference
-
-**Qwen Team, Alibaba Cloud (2024).** Qwen2.5-0.5B-Instruct (Q4_K_M GGUF quantization). https://huggingface.co/Qwen/Qwen2.5-0.5B-Instruct-GGUF
-
-Used exclusively as a natural-language input parser (text → sensory channel JSON). Output generation is intentionally disabled. Licensed under the **Qwen License** (non-commercial research use).
-
-**Gerganov, G. et al. llama.cpp.** https://github.com/ggerganov/llama.cpp — MIT License.
-The underlying C++ LLM inference runtime used by `llama-cpp-python`.
-
-**Abetlen, A. et al. llama-cpp-python.** https://github.com/abetlen/llama-cpp-python — MIT License.
-Python bindings for llama.cpp used to load and run the Qwen model.
+**Breathing Stone Bridge (`stone_bridge.py`)** — Connects a physical haptic device (Breathing Stone, ESP32-based) to HumanBrainDT. Sensor data (skin temperature, grip force) → Polyvagal state inference → LIF simulation → intervention parameters fed back to the device. Logs TGAM-format CSV and JSONL training records.
 
 ---
 
-## 3D Visualisation
+## Architecture
 
-**mrdoob et al. Three.js.** https://threejs.org — MIT License.
-The entire 3D galaxy-style brain viewer (`HumanBrainDT/viewer/static/index.html`) is built on Three.js, including WebGLRenderer, PointsMaterial, LineSegments, BufferGeometry, QuadraticBezierCurve3, and CubicBezierCurve3.
-
-**Three.js OrbitControls addon.** https://github.com/mrdoob/three.js/blob/dev/examples/jsm/controls/OrbitControls.js — MIT License.
-Used for camera orbit, zoom, and pan in the 3D viewer.
-
----
-
-## Web Server & API
-
-**Ramírez, S. et al. FastAPI.** https://fastapi.tiangolo.com — MIT License.
-Powers the WebSocket server, REST endpoints (`/api/csv`, `/api/log`, `/api/seed`), and static file serving in `HumanBrainDT/viewer/server.py`.
-
-**Langa, T. et al. Uvicorn.** https://www.uvicorn.org — BSD License.
-ASGI server used to run the FastAPI application.
-
----
-
-## Scientific Libraries
-
-**Harris, C. R., Millman, K. J., van der Walt, S. J., et al. (2020).** Array programming with NumPy. *Nature*, 585, 357–362. https://doi.org/10.1038/s41586-020-2649-2 — BSD License.
-NumPy is used throughout for LIF simulation matrices, weight normalization, spike counting, and all numerical computation.
+```
+[Physical device / demo]
+  ESP32: skin_temp, grip_n, contact, rhythm_phase
+        │
+        ▼  stone_bridge.py
+  Polyvagal state inference (ventral / sympathetic / dorsal)
+        │
+        ▼
+  HumanBrainDT LIF simulation (10 regions, 690 neurons)
+  ├─ ANS: sympathetic, parasympathetic, HRV, cortisol
+  ├─ Anxiety: baseline, anticipatory, somatic, regulation, healing_index
+  └─ Sensory: touch_deep, vibration, thermal_cold, rhythmic, interoception
+        │
+        ├──▶  ESP32 intervention command (mode, temp_c, breath ratio, trigger)
+        ├──▶  TGAM CSV  (stone_session.csv)
+        ├──▶  Training log  (stone_session_training.jsonl)
+        └──▶  WebSocket → 3D brain viewer (http://localhost:7860)
+```
 
 ---
 
-## Neuroscience Frameworks (HumanBrainDT)
+## Repository structure
 
-The simulation model, pathway weights, and ANS/anxiety decomposition in `HumanBrainDT/core/lif_engine.py` are derived from the following peer-reviewed literature. No code was copied from any of these sources; they were used to determine parameter values and architectural decisions.
+```
+chimera/
+  chimera_app.py              CHIMERA main (Drosophila brain + MuJoCo)
+  chimera_load_connectome.py  Connectome parser (Winding 2023 data)
+  chimera_real_connectome.py  Auto-downloader for connectome data
+  chimera_mcp.py              MCP server wrapper for CHIMERA
+  setup.py                    One-command installer
+  stone_bridge.py             Breathing Stone ↔ HumanBrainDT bridge
+  tgam_csv_generator.py       TGAM-format CSV generator + ESP32 sensor mapping
+  jetson_setup.sh             Jetson Nano deployment script
+  jetson_requirements.txt     Jetson-specific dependencies
 
-**Autonomic Nervous System / Polyvagal Theory**
-
-- **Porges, S. W. (1995).** Orienting in a defensive world: Mammalian modifications of our evolutionary heritage. A polyvagal theory. *Psychophysiology*, 32(4), 301–318. https://doi.org/10.1111/j.1469-8986.1995.tb01213.x
-- **Porges, S. W. (2022).** Polyvagal Theory: A science of safety. *Frontiers in Integrative Neuroscience*, 16. https://doi.org/10.3389/fnint.2022.871227
-
-*Basis for sympathetic/parasympathetic balance, HRV as vagal tone proxy, and the three polyvagal states (ventral vagal, sympathetic, dorsal vagal) used in `stone_bridge.py`.*
-
-**Deep Pressure / CT Afferents / Oxytocin**
-
-- **McGlone, F., Wessberg, J., & Olausson, H. (2014).** Discriminative and affective touch: Sensing and feeling. *Neuron*, 82(4), 737–755. https://doi.org/10.1016/j.neuron.2014.05.001
-- **Uvnäs-Moberg, K., Handlin, L., & Petersson, M. (2014).** Self-soothing behaviors with particular reference to oxytocin release induced by non-noxious sensory stimulation. *Frontiers in Psychology*, 5. https://doi.org/10.3389/fpsyg.2014.01529
-
-*Basis for `touch_deep` healing weight (0.85): deep pressure → CT afferents → oxytocin → HPA axis inhibition → parasympathetic upregulation.*
-
-**Temperature / Insula / Interoception**
-
-- **Ijzerman, H., & Semin, G. R. (2009).** The thermometer of social relations: Mapping social proximity on temperature. *Psychological Science*, 20(10), 1214–1220. https://doi.org/10.1111/j.1467-9280.2009.02434.x
-- **Craig, A. D. (2002).** How do you feel? Interoception: the sense of the physiological condition of the body. *Nature Reviews Neuroscience*, 3(2), 655–666. https://doi.org/10.1038/nrn894
-
-*Basis for `thermal_warm` healing weight (0.75): warmth → insula → hypothalamus → parasympathetic activation.*
-
-**Interoception / Predictive Coding**
-
-- **Seth, A. K. (2013).** Interoceptive inference, emotion, and the embodied self. *Trends in Cognitive Sciences*, 17(11), 565–573. https://doi.org/10.1016/j.tics.2013.09.007
-- **Price, C. J., & Hooven, C. (2018).** Interoceptive awareness skills for emotion regulation: Theory and approach of mindful awareness in body-oriented therapy (MABT). *Frontiers in Psychology*, 9. https://doi.org/10.3389/fpsyg.2018.00798
-
-*Basis for `interoception` routing to insula → cingulate → hypothalamus, and the regulation pathway.*
-
-**Rhythmic Breathing / Vagal Tone**
-
-- **Kleitman, N. (1963).** *Sleep and Wakefulness* (2nd ed.). University of Chicago Press.
-
-*Basis for `rhythmic` healing weight (0.70): rhythmic input → cerebellum → thalamus → vagal tone upregulation.*
-
-**Allostatic Load / HPA Axis**
-
-- **McEwen, B. S. (1998).** Stress, adaptation, and disease: Allostasis and allostatic load. *Annals of the New York Academy of Sciences*, 840(1), 33–44. https://doi.org/10.1111/j.1749-6632.1998.tb09546.x
-
-*Basis for `anxiety.baseline` (allostatic overload) and `stress_hormone` channel → HPA axis modelling.*
-
-**Amygdala / Threat Circuit**
-
-- **LeDoux, J. E. (1996).** *The Emotional Brain: The Mysterious Underpinnings of Emotional Life*. Simon & Schuster.
-
-*Basis for `threat_input` → amygdala → brainstem routing (healing weight −1.00), and the amygdalofugal pathway.*
-
-**Prefrontal–Amygdala Regulation / Anxiety**
-
-- **Etkin, A., Büchel, C., & Gross, J. J. (2015).** The neural bases of emotion regulation. *Nature Reviews Neuroscience*, 16(11), 693–700. https://doi.org/10.1038/nrn4044
-
-*Basis for `anxiety.anticipatory` (prefrontal–ACC–amygdala worry loop) and `anxiety.regulation` (PFC top-down control of amygdala).*
-
-**Somatic Anxiety / Insula**
-
-- **Paulus, M. P., & Stein, M. B. (2006).** An insular view of anxiety. *Biological Psychiatry*, 60(4), 383–387. https://doi.org/10.1016/j.biopsych.2006.03.042
-
-*Basis for `anxiety.somatic` calculation using insula spike count, and `muscle_tension` / `nausea_input` routing to insula.*
-
-**Deep Pressure / Vibration**
-
-- **Krauss, J. K., et al. (1987).** Vibration-induced cortical inhibition and thalamic gating. Referenced in context of cerebellum → thalamic gating for vibration input.
-
-*Basis for `touch_vibration` healing weight (0.60) and cerebellar routing.*
-
-**Cold Face Reflex**
-
-- **Cold Face Test.** (Multiple PubMed sources, 2022.) Cold water application to face → brainstem → amygdala → sympathetic arousal.
-
-*Basis for `thermal_cold` healing weight (−0.30): cold → brainstem/amygdala → sympathetic upregulation.*
+HumanBrainDT/
+  brain.py                    Top-level HumanBrain class
+  core/
+    lif_engine.py             LIF simulator, ANS/anxiety/sensory computation
+    signal.py                 BrainState, ANSState, AnxietyState dataclasses
+    region.py                 BrainRegion + NeuronPopulation
+  regions/
+    builder.py                Builds 10-region brain with inter-region weights
+  viewer/
+    server.py                 FastAPI WebSocket server + /api/csv + /api/log
+    static/index.html         3D particle brain viewer (Three.js)
+  server/
+    brain_mcp.py              MCP server for HumanBrainDT (8 tools)
+```
 
 ---
 
-## MNI Brain Atlas
+## Quick start
 
-The spatial coordinates of all 16 brain regions in `HumanBrainDT/regions/builder.py` and the 3D viewer are derived from standard MNI (Montreal Neurological Institute) space centroids, using publicly available neuroimaging literature and atlas references:
+### CHIMERA (Drosophila brain + MuJoCo body)
 
-- **Collins, D. L., Neelin, P., Peters, T. M., & Evans, A. C. (1994).** Automatic 3D intersubject registration of MR volumetric data in standardized Talairach space. *Journal of Computer Assisted Tomography*, 18(2), 192–205.
-- **Mazziotta, J., Toga, A., Evans, A., et al. (2001).** A probabilistic atlas and reference system for the human brain. *Philosophical Transactions of the Royal Society B*, 356(1412), 1293–1322. https://doi.org/10.1098/rstb.2001.0915
+```bash
+curl -O https://raw.githubusercontent.com/caparison1234/chimera/main/setup.py
+python3 setup.py
+python3 chimera_app.py
+```
 
----
+Type `danger`, `run`, `food smell`, `breathe` etc. in any language.  
+Without the Qwen model, runs in keyword-matching mode (still fully functional).
 
-## Hardware Platforms
+### HumanBrainDT viewer
 
-**NeuroSky ThinkGear ASIC Module (TGAM).** The `stone_session.csv` output format in `tgam_csv_generator.py` follows TGAM EEG band conventions (delta, theta, alpha, beta, gamma). https://neurosky.com
+```bash
+pip install fastapi uvicorn[standard] websockets numpy
+python3 HumanBrainDT/viewer/server.py
+# → http://localhost:7860
+```
 
-**Espressif ESP32.** The Breathing Stone device uses an ESP32 microcontroller for skin temperature sensing, grip force measurement, and haptic feedback. https://www.espressif.com
+Type sensory stimuli: `deep pressure`, `warm`, `breathing`, `anxiety`, `danger`, `calm`
 
-**NVIDIA Jetson Nano.** Deployment configuration in `jetson_setup.sh` targets the Jetson Nano for edge inference. https://developer.nvidia.com/embedded/jetson-nano
+### Breathing Stone bridge (demo mode)
 
----
+```bash
+pip install -r jetson_requirements.txt
+python3 stone_bridge.py --demo --steps 120
+# or live ESP32:
+python3 stone_bridge.py --serial COM3 --out session.csv
+```
 
-## Software Tools
-
-**PyInstaller.** https://pyinstaller.org — GPL-2.0-or-later.
-Used to build the Windows `.exe` distribution (`chimera.spec`, `build.bat`).
-
-**Tunnelmole.** https://tunnelmole.com — MIT License.
-Used for public URL tunnelling during demonstrations (`tmole.js`).
-
----
-
-## License Summary
-
-| Component | License |
-|-----------|---------|
-| Connectome data (Winding et al. 2023) | CC BY 4.0 |
-| Qwen2.5-0.5B model weights | Qwen License (non-commercial) |
-| MuJoCo | Apache 2.0 |
-| Three.js | MIT |
-| Three.js OrbitControls | MIT |
-| llama.cpp | MIT |
-| llama-cpp-python | MIT |
-| FastAPI | MIT |
-| Uvicorn | BSD |
-| NumPy | BSD |
-| PyInstaller | GPL-2.0-or-later |
-| Tunnelmole | MIT |
-| All original code in this repository | MIT |
+Generates `stone_session.csv` (TGAM format) and `stone_session_training.jsonl`.
 
 ---
 
-## Statement of Originality
+## TGAM CSV format
 
-All simulation code, architectural decisions, and software implementations in this repository are original work. External libraries are used only through their published APIs. Neuroscience literature was used solely to derive parameter values and model architecture; no text, code, or data from those papers was incorporated directly.
+`stone_session.csv` follows NeuroSky ThinkGear ASIC Module output conventions:
+
+| Field | Type | Range | Mapping source |
+|-------|------|-------|---------------|
+| timestamp | float | Unix time | `brain_state.timestamp` |
+| signal_quality | int | 0–50 | `anxiety.baseline × 50` |
+| attention | int | 0–100 | `motor_command.approach × 100` |
+| meditation | int | 0–100 | `ans.parasympathetic × (1−sym×0.6) × 100` |
+| delta | int | 0–65535 | `anxiety.baseline` |
+| theta | int | 0–65535 | `anxiety.anticipatory` |
+| low_alpha | int | 0–65535 | `anxiety.healing_index × 0.5` |
+| high_alpha | int | 0–65535 | `ans.hrv_index` |
+| low_beta | int | 0–65535 | `ans.sympathetic` |
+| high_beta | int | 0–65535 | `motor_command.avoid` |
+| low_gamma | int | 0–65535 | `motor_command.engage` |
+| mid_gamma | int | 0–65535 | `sensory.rhythmic` |
+| raw_eeg | int | −2048–2047 | synthesised (alpha/beta/theta mix) |
+
+---
+
+## Polyvagal state inference
+
+`stone_bridge.py` infers one of three Polyvagal states from sensor data:
+
+| State | Condition | Intervention |
+|-------|-----------|-------------|
+| **ventral** (calm) | skin temp ≈ baseline, grip ≈ baseline | default 4↑/6↓ at 35°C |
+| **sympathetic** (anxiety) | skin temp < baseline−1°C AND grip > baseline+1SD | calm mode: 4↑/8↓ at 34°C |
+| **dorsal** (freeze) | skin temp < baseline−1°C AND grip < baseline−0.5SD | activate mode: 5↑/4↓ at 37°C |
+
+The personal baseline builds over time using exponential weighted moving average (α = 0.02, ~50-sample window). First 7 days uses population defaults.
+
+---
+
+## Jetson Nano deployment
+
+```bash
+chmod +x jetson_setup.sh
+./jetson_setup.sh
+# Then:
+python3 stone_bridge.py --serial /dev/ttyUSB0 --out /tmp/session.csv
+python3 HumanBrainDT/viewer/server.py
+# → http://<jetson_ip>:7860
+```
+
+MuJoCo (`chimera_app.py`) does **not** run on Jetson — no display output. Use the HumanBrainDT viewer (browser-based) instead.
+
+---
+
+## Neuroscience references
+
+The healing pathway weights in `lif_engine.py` (`HEALING_WEIGHTS`) are derived from:
+
+| Channel | Weight | Source |
+|---------|--------|--------|
+| `touch_deep` | 0.85 | McGlone et al. (2014) CT fibers → oxytocin → HPA axis inhibition; Uvnäs-Moberg et al. (2014) |
+| `thermal_warm` | 0.75 | Ijzerman & Semin (2009); Craig (2002) warm → insula → parasympathetic |
+| `rhythmic` | 0.70 | Porges (1995) vagal tone ↑ via rhythmic breathing; Kleitman (1963) BRAC |
+| `touch_vibration` | 0.60 | Krauss (1987) deep pressure; vibration → cerebellum → thalamic gating |
+| `interoception` | 0.45 | Seth (2013) interoceptive prediction coding; Price & Hooven (2018) MABT |
+| `thermal_cold` | −0.30 | Cold Face Test (PubMed 2022) — mild cold activates brainstem/amygdala |
+| `threat_input` | −1.00 | LeDoux (1996) amygdala threat circuit |
+
+ANS computation follows Porges (2022) Polyvagal Theory: sympathetic/parasympathetic balance, HRV as vagal tone proxy.
+
+Anxiety decomposition follows:
+- **baseline**: allostatic overload (McEwen 1998)
+- **anticipatory**: prefrontal–amygdala worry loop (Etkin et al. 2015)
+- **somatic**: insula interoception (Paulus & Stein 2006)
+- **regulation**: PFC → amygdala top-down control (Etkin et al. 2015)
+- **healing_index**: net calming effect of current sensory input
+
+---
+
+## Acknowledgements
+
+**Connectome data (CHIMERA)**  
+Winding, M., Pedigo, B. D., Barnes, C. L., Patsolic, H. G., Park, Y., Krieger, T., … Zlatic, M. (2023). The connectome of an insect brain. *Science*, 379(6636). https://doi.org/10.1126/science.add9330  
+Data: https://github.com/brain-networks/larval-drosophila-connectome
+
+**Language model (input parser)**  
+Qwen2.5-0.5B-Instruct, Alibaba Cloud. https://huggingface.co/Qwen/Qwen2.5-0.5B-Instruct-GGUF  
+Used only for natural language → sensory channel JSON parsing (not for output generation).
+
+**Physics simulation**  
+MuJoCo (Todorov et al., 2012). https://mujoco.org
+
+**LLM inference runtime**  
+llama.cpp. https://github.com/ggerganov/llama.cpp  
+Python binding: llama-cpp-python. https://github.com/abetlen/llama-cpp-python
+
+**3D visualisation**  
+Three.js. https://threejs.org
+
+**Neuroscience frameworks used in HumanBrainDT design**  
+- Porges, S. W. (1995/2022). Polyvagal Theory. *Psychophysiology* / *Frontiers in Integrative Neuroscience*.  
+- Seth, A. K. (2013). Interoceptive inference. *Trends in Cognitive Sciences*, 17(11).  
+- McEwen, B. S. (1998). Allostasis. *New England Journal of Medicine*, 338.  
+- McGlone, F., Wessberg, J., & Olausson, H. (2014). CT afferents. *Neuron*, 82(4).  
+- Craig, A. D. (2002). Temperature and interoception. *Nature Neuroscience*, 3(2).
+
+**No code was copied from any of these sources.** The neuroscience literature was used strictly to derive parameter values and architectural decisions in the simulation model. All code is original.
+
+---
+
+## License
+
+MIT — see LICENSE file.
+
+The connectome data (Winding et al. 2023) is used under its original CC BY 4.0 license.  
+The Qwen model weights are used under Qwen License (non-commercial research use).  
+MuJoCo is used under its Apache 2.0 license.
