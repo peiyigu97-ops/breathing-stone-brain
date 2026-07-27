@@ -6,6 +6,7 @@
 ![synapses](https://img.shields.io/badge/synapses-22%2C400-blue)
 ![human_regions](https://img.shields.io/badge/HumanBrain_regions-16-purple)
 ![sensory_channels](https://img.shields.io/badge/sensory_channels-28-blueviolet)
+![version](https://img.shields.io/badge/version-3.0.0-brightgreen)
 ![platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Jetson-lightgrey)
 ![license](https://img.shields.io/badge/license-MIT-green)
 
@@ -17,11 +18,35 @@ This repo contains two interconnected systems:
 
 **CHIMERA** — A digital lifeform built from the real *Drosophila* larva connectome (Winding et al., *Science* 2023). 1,373 LIF neurons and 22,400 synapses drive a MuJoCo physics body. Type anything in any language → sensory channels fire → emergent motor behavior.
 
-**HumanBrainDT** — A human brain digital twin with **16 anatomically-positioned regions**, LIF simulation extended for anxiety-sensory research. Models the full Autonomic Nervous System (sympathetic/parasympathetic/HPA axis), anxiety decomposition (baseline, anticipatory, somatic, regulation), 28 sensory/neuromodulator channels, and correct anatomical neural pathways based on MNI atlas coordinates.
+**HumanBrainDT** — A human brain digital twin with **16 anatomically-positioned regions**, LIF simulation extended for anxiety-sensory research. Models the full Autonomic Nervous System (sympathetic/parasympathetic/HPA axis), anxiety decomposition (baseline, anticipatory, somatic, regulation), 28 sensory/neuromodulator channels, and anatomically correct neural pathways based on MNI atlas coordinates.
 
-A **Galaxy View 3D visualiser** renders each brain region as a primary star + nebula cloud, with layered activation: neural filaments light first, then the primary star, then the nebula trails behind with a ~1.5s delay.
+**Galaxy View 3D visualiser (v3)** — Each brain region renders as a primary star + nebula cloud. Signal propagation uses a fiber-optic pulse architecture: short line segments travel along bézier-curve tubes constrained inside the wire. Activation cascades region-to-region along anatomical pathways. Rendering uses GPU shader cloud drift and merged draw calls for performance.
 
 **Breathing Stone Bridge (`stone_bridge.py`)** — Connects a physical haptic device (Breathing Stone, ESP32-based) to HumanBrainDT. Sensor data (skin temperature, grip force) → Polyvagal state inference → LIF simulation → intervention parameters fed back to the device.
+
+---
+
+## Quick start
+
+```bash
+pip install fastapi uvicorn numpy
+python -m uvicorn HumanBrainDT.viewer.server:app --host 127.0.0.1 --port 7860
+# → http://localhost:7860
+```
+
+Type any sensory or emotional stimulus in the input box — Chinese and English both work:
+
+```
+danger          → amygdala + brainstem + locus coeruleus cascade
+panic attack    → threat + anticipatory anxiety + LC broadcast
+deep pressure   → insula + parietal + vagal pathway
+breathing       → cerebellum + thalamus + frontal regulation
+nausea          → brainstem + insula + hypothalamus
+exhausted       → hypothalamus + locus coeruleus
+joy             → substantia nigra + basal ganglia + orbitofrontal
+heart racing    → insula + hypothalamus + amygdala
+pain            → insula + anterior cingulate + amygdala
+```
 
 ---
 
